@@ -1,0 +1,104 @@
+pipeline {
+  agent any
+  environment {
+      erp = "014357505841.dkr.ecr.ap-south-1.amazonaws.com/erp"
+      mydb = "014357505841.dkr.ecr.ap-south-1.amazonaws.com/mariadb"
+  }
+  stages {
+    //Cloning Dockerfiles from Git
+      stage('Cloning Dockerfiles') {
+        steps {
+          checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/yaseensec/darkerp_dockerfiles.git']]])     
+        }
+      }
+
+    // Building Docker images
+      stage('Building Images Using Docker Host') {
+        steps{
+          script {
+            docker.withServer(
+              'tcp://darkrose.yaseenins.com:2376', 
+              'Docker_Server_Auth_Main_Arch'
+            ) 
+            {
+              erpImage = docker.build(erp, "--no-cache -f dockerfile-multistage .")
+              mydbImage = docker.build(mydb, "--no-cache -f dockerfile-db .")
+            }
+          }
+        }
+      }
+      
+  
+    // Uploading Docker images into AWS ECR
+      stage('Pushing to ECR') {
+        steps{  
+          script {
+            docker.withServer(
+              'tcp://darkrose.yaseenins.com:2376', 
+              'Docker_Server_Auth_Main_Arch'
+            ) 
+            {
+              docker.withRegistry( 
+                'https://014357505841.dkr.ecr.ap-south-1.amazonaws.com',
+                'ecr:up-south-1:Aws_Credentials'
+              )  
+              {
+                erpImage.push("v13")
+                mydbImage.push("10.3")
+              }
+            }  
+          }    
+        }
+      }
+    //Removing Images Locally
+      stage('Removing Images from Docker Host') {
+        steps{
+          script {
+            docker.withServer(
+              'tcp://darkrose.yaseenins.com:2376', 
+              'Docker_Server_Auth_Main_Arch'
+            ) 
+            {
+              sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'014357505841.dkr.ecr.ap-south-1.amazonaws.com/erp\')'
+              sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'014357505841.dkr.ecr.ap-south-1.amazonaws.com/mariadb\')'
+            }
+          }
+        }
+      }
+    //Pulling Images From ECR to Host
+      stage('Pulling Images from ECR to Host') {
+        steps{
+          script {
+            docker.withServer(
+              'tcp://enigma.yaseenins.com:2376', 
+              'Docker_Server_Auth_VM_Arch'
+            ) 
+            {
+              docker.withRegistry( 
+                'https://014357505841.dkr.ecr.ap-south-1.amazonaws.com',
+                'ecr:ap-south-1:Aws_Credentials'
+              ) 
+              {
+                docker.image("014357505841.dkr.ecr.ap-south-1.amazonaws.com/erp:v13").pull()
+                docker.image("014357505841.dkr.ecr.ap-south-1.amazonaws.com/mariadb:10.3").pull()
+              } 
+            }   
+          }
+        }
+      }
+    //Using Docker-Compose to Start Services
+      stage('Deploying Containers') {
+        steps{
+          script {
+            docker.withServer(
+              'tcp://enigma.yaseenins.com:2376', 
+              'Docker_Server_Auth_VM_Arch'
+            ) 
+            {
+              sh 'docker-compose up -d'
+            }   
+          }
+        }
+      }
+  }
+}

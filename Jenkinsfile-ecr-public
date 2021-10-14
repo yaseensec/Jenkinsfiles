@@ -1,0 +1,173 @@
+pipeline {
+  agent any
+  environment {
+      erp = "public.ecr.aws/m9v0w4d5/erp"
+      mydb = "public.ecr.aws/m9v0w4d5/mariadb"
+  }
+  stages {
+    //Cloning Dockerfiles from Git
+      stage('Cloning Dockerfiles') {
+        steps {
+          checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/yaseensec/darkerp_dockerfiles.git']]])     
+        }
+      }
+    // Building Docker images
+      stage('Building Images Using Docker Image Builder Host') {
+        steps{
+          script {
+            docker.withServer(
+              'tcp://192.168.0.40:2376', 
+              'Docker_Client_Auth'
+            ) 
+            {
+              erpImage = docker.build(erp, "--no-cache -f dockerfile-multistage .")
+              mydbImage = docker.build(mydb, "--no-cache -f dockerfile-db .")
+            }
+          }
+        }
+      }
+    // Uploading Docker images into AWS ECR
+      stage('Pushing to ECR') {
+        steps{  
+          script {
+            docker.withServer(
+              'tcp://darkrose.yaseenins.com:2376', 
+              'Docker_Client_Auth'
+            ) 
+            {
+              sh '/usr/local/bin/aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/m9v0w4d5'
+              erpImage.push("v13")
+              mydbImage.push("10.3")
+            }  
+          }    
+        }
+      }
+    //Removing Images Locally
+      stage('Removing Images from Docker Image Builder Host') {
+        steps{
+          script {
+            docker.withServer(
+              'tcp://darkrose.yaseenins.com:2376', 
+              'Docker_Client_Auth'
+            ) 
+            {
+              sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'public.ecr.aws/m9v0w4d5/erp\')'
+              sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'public.ecr.aws/m9v0w4d5/mariadb\')'
+            }
+          }
+        }
+      }
+    // //Removing Previous Images from Entropy Docker Node
+    //   stage('Removing Previous Images from Enigma Node') {
+    //     steps{
+    //       script {
+    //         docker.withServer(
+    //           'tcp://enigma.yaseenins.com:2376', 
+    //           'Docker_Client_Auth'
+    //         ) 
+    //         {
+    //           sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'public.ecr.aws/m9v0w4d5/erp\')'
+    //           sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'public.ecr.aws/m9v0w4d5/mariadb\')'
+    //         }
+    //       }
+    //     }
+    //   }
+    // //Removing Previous Images from Entropy Docker Node
+    //   stage('Removing Previous Images from Entropy Node') {
+    //     steps{
+    //       script {
+    //         docker.withServer(
+    //           'tcp://entropy.yaseenins.com:2376', 
+    //           'Docker_Client_Auth'
+    //         ) 
+    //         {
+    //           sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'public.ecr.aws/m9v0w4d5/erp\')'
+    //           sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'public.ecr.aws/m9v0w4d5/mariadb\')'
+    //         }
+    //       }
+    //     }
+    //   }
+    // //Pulling Images From ECR to Docker Node Enigma
+    //   stage('Pulling Images from ECR to Enigma Docker Node') {
+    //     steps{
+    //       script {
+    //         docker.withServer(
+    //           'tcp://enigma.yaseenins.com:2376', 
+    //           'Docker_Client_Auth'
+    //         ) 
+    //         {
+    //           sh '/usr/local/bin/aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/m9v0w4d5'
+    //           docker.image("public.ecr.aws/m9v0w4d5/erp:v13").pull()
+    //           docker.image("public.ecr.aws/m9v0w4d5/mariadb:10.3").pull()
+    //         }   
+    //       }
+    //     }
+    //   }
+    // //Pulling Images From ECR to Docker Node Entropy
+    //   stage('Pulling Images from ECR to Entropy DOcker Node ') {
+    //     steps{
+    //       script {
+    //         docker.withServer(
+    //           'tcp://entropy.yaseenins.com:2376', 
+    //           'Docker_Client_Auth'
+    //         ) 
+    //         {
+    //           sh '/usr/local/bin/aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/m9v0w4d5'
+    //           docker.image("public.ecr.aws/m9v0w4d5/erp:v13").pull()
+    //           docker.image("public.ecr.aws/m9v0w4d5/mariadb:10.3").pull()
+    //         }   
+    //       }
+    //     }
+    //   }
+      stage('Pulling Docker Images to Docker Nodes'){
+        parallel{
+          //Pulling Images From ECR to Docker Node Entropy
+          stage('Pulling Images from ECR to Entropy Docker Node ') {
+            steps{
+              script {
+                docker.withServer(
+                  'tcp://entropy.yaseenins.com:2376', 
+                  'Docker_Client_Auth'
+                ) 
+                {
+                  sh '/usr/local/bin/aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/m9v0w4d5'
+                  docker.image("public.ecr.aws/m9v0w4d5/erp:v13").pull()
+                  docker.image("public.ecr.aws/m9v0w4d5/mariadb:10.3").pull()
+                }   
+              }
+            }
+          }
+          //Pulling Images From ECR to Docker Node Enigma
+          stage('Pulling Images from ECR to Enigma Docker Node') {
+            steps{
+              script {
+                docker.withServer(
+                  'tcp://enigma.yaseenins.com:2376', 
+                  'Docker_Client_Auth'
+                ) 
+                {
+                  sh '/usr/local/bin/aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/m9v0w4d5'
+                  docker.image("public.ecr.aws/m9v0w4d5/erp:v13").pull()
+                  docker.image("public.ecr.aws/m9v0w4d5/mariadb:10.3").pull()
+                }   
+              }
+            }
+          }
+        }
+      }
+    // Deploying Containers on Docker Nodes Using Docker Swarm
+      stage('Deploying Containers') {
+        steps{  
+          script {
+            docker.withServer(
+              'tcp://darkrose.yaseenins.com:2376', 
+              'Docker_Client_Auth'
+            ) 
+            {
+              sh 'docker stack deploy -c docker-stack.yml ERP'
+            }  
+          }    
+        }
+      }
+  }
+}

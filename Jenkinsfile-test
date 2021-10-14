@@ -1,0 +1,55 @@
+pipeline {
+  agent any
+  stages {
+    stage('Git CLoning') {
+      steps {
+        git(url: 'https://github.com/yaseensec/Jenkinsfiles.git', branch: 'master')
+      }
+    }
+
+    stage('Build') {
+      parallel {
+        stage('Build') {
+          steps {
+            sh 'ls /tmp'
+            sh 'ls -al /tmp'
+          }
+        }
+
+        stage('Test Step') {
+          steps {
+            sleep 10
+            sh 'ls -al /tmp'
+          }
+        }
+
+      }
+    }
+
+    stage('Test') {
+      parallel {
+        stage('Test') {
+          steps {
+            sh 'ls /usr/bin'
+          }
+        }
+
+        stage('Test1') {
+          steps {
+            sh 'ls -al /var/lib'
+          }
+        }
+
+      }
+    }
+
+    stage('docker rmi') {
+      steps {
+        sh '''docker images
+'''
+        sh 'docker rmi $(docker images --format \'{{.Repository}}:{{.Tag}}\' | grep \'014357505841.dkr.ecr.ap-south-1.amazonaws.com/erp\')'
+      }
+    }
+
+  }
+}
