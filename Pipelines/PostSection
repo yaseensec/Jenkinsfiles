@@ -11,7 +11,7 @@ pipeline {
                 echo "Hello Yaseen"
               }
               else {
-                sh 'true'
+                sh 'false'
               }
             }
           }
