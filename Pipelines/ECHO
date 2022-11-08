@@ -11,7 +11,7 @@ pipeline {
           timestamps {
             ansiColor('xterm') {
               if(params.BuildNumber == true) {
-                echo "${env.BUILD_NUMBER}"
+                echo "BuildNumber = ${env.BUILD_NUMBER}"
               }
               if (params.Credentials == true) {
                 sh "echo $SERVICE_CREDS"
