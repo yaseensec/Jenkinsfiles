@@ -40,7 +40,7 @@ pipeline {
             {
               docker.withRegistry( 
                 'https://014357505841.dkr.ecr.ap-south-1.amazonaws.com',
-                'ecr:up-south-1:Aws_Credentials'
+                'ecr:ap-south-1:Aws_Credentials'
               )  
               {
                 erpImage.push("v13")
