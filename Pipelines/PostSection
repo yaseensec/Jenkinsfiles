@@ -1,27 +1,42 @@
 pipeline {
-    agent any
-    stages {
-        stage('Hello') {
-            steps {
-                sh 'false'
+  agent { label 'aws.node1'}
+  stages {
+    stage('Hello') {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              if(params.PostSuccess == true) {
+                echo "Hello Yaseen"
+              }
+              else {
+                sh 'true'
+              }
             }
-            post {
-                success {
-                    echo 'this is the stage post success message'
-                }
-            }
+          }
         }
-    }
-    post {
+      }
+      post {
         success {
-            echo 'this is the overall post success message'
+          echo 'this is the stage post success message'
         }
-        failure {
-            echo 'this is the overall post failure message'
-        }
-        cleanup {
-            echo 'this is the overall post cleanup message'
-        }
+      }
     }
+  }
+  post {
+    success {
+      echo 'this is the overall post success message'
+    }
+    failure {
+      echo 'this is the overall post failure message'
+    }
+    cleanup {
+      echo 'this is the overall post cleanup message'
+    }
+  }
+  parameters {
+    booleanParam(name: 'PostSuccess', defaultValue: false, description: '')
+  }
 }
 
