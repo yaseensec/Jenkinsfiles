@@ -1,0 +1,30 @@
+pipeline {
+  agent { label 'aws.node1'}
+  environment {
+    SERVICE_CREDS = credentials('yaseensec')
+  }
+  stages {
+    stage('Hello') {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              if(params.BuildNumber == true) {
+                echo "${env.BUILD_NUMBER}"
+              }
+              if (params.Credentials == true) {
+                sh "echo $SERVICE_CREDS"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  parameters {
+    booleanParam(name: 'BuildNumber', defaultValue: true, description: '')
+    booleanParam(name: 'Credentials', defaultValue: false, description: '')
+  }
+}
+
