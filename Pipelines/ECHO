@@ -1,7 +1,7 @@
 pipeline {
   agent { label 'aws.node1'}
   environment {
-    SERVICE_CREDS = credentials('yaseensec')
+    SERVICE_CREDS = credentials('gitlab-user-pass')
   }
   stages {
     stage('Hello') {
