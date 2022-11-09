@@ -4,7 +4,7 @@ pipeline {
     SERVICE_CREDS = credentials('gitlab-user-pass')
   }
   stages {
-    stage('Hello') {
+    stage('Boolean Parameter') {
     agent { label 'aws.node1'}
       steps {
         script {
@@ -21,7 +21,7 @@ pipeline {
         }
       }
     }
-    stage(Text Parameter) {
+    stage('Text Parameter') {
     agent { label 'aws.node1'}
       steps {
         script {
@@ -33,7 +33,7 @@ pipeline {
         }
       }
     }
-    stage(String Parameter) {
+    stage('String Parameter') {
     agent { label 'aws.node1'}
       steps {
         script {
@@ -45,7 +45,7 @@ pipeline {
         }
       }
     }
-    stage(Choice Parameter) {
+    stage('Choice Parameter') {
     agent { label 'aws.node1'}
       steps {
         script {
