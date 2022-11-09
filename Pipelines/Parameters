@@ -1,0 +1,69 @@
+pipeline {
+  agent { label 'aws.node1'}
+  environment {
+    SERVICE_CREDS = credentials('gitlab-user-pass')
+  }
+  stages {
+    stage('Hello') {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              if(params.BuildNumber == true) {
+                echo "BuildNumber = ${env.BUILD_NUMBER}"
+              }
+              if (params.Credentials == true) {
+                sh "echo $SERVICE_CREDS"
+              }
+            }
+          }
+        }
+      }
+    }
+    stage(Text Parameter) {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              sh "echo 'TEXT': ${params.Text}"
+            }
+          }
+        }
+      }
+    }
+    stage(String Parameter) {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              sh "echo 'ROLE': ${params.Role}"
+            }
+          }
+        }
+      }
+    }
+    stage(Choice Parameter) {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              sh "echo 'SERVER': ${params.Server}"
+            }
+          }
+        }
+      }
+    }
+  }
+  parameters {
+    booleanParam(name: 'BuildNumber', defaultValue: true, description: '')
+    booleanParam(name: 'Credentials', defaultValue: false, description: '')
+    text(name: 'Text',description: 'Jenkins Version?' )
+    string(name: 'Role',defaultValue: 'false',description:'')
+    choice(name: 'Server',choices: 'Linux\nUnix',description: '')
+  }
+}
+
