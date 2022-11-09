@@ -35,6 +35,9 @@ pipeline {
       echo 'this is the overall post cleanup message'
     }
   }
+  options {
+    buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
+  }
   parameters {
     booleanParam(name: 'PostSuccess', defaultValue: false, description: '')
   }

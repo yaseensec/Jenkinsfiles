@@ -22,6 +22,9 @@ pipeline {
       }
     }
   }
+  options {
+    buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
+  }
   parameters {
     booleanParam(name: 'BuildNumber', defaultValue: true, description: '')
     booleanParam(name: 'Credentials', defaultValue: false, description: '')
