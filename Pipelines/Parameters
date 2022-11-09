@@ -62,7 +62,7 @@ pipeline {
     booleanParam(name: 'BuildNumber', defaultValue: true, description: '')
     booleanParam(name: 'Credentials', defaultValue: false, description: '')
     text(name: 'Text',description: 'Jenkins Version?' )
-    string(name: 'Role',defaultValue: 'false',description:'')
+    string(name: 'Role',defaultValue: '',description:'')
     choice(name: 'Server',choices: 'Linux\nUnix',description: '')
   }
 }
