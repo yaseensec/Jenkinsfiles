@@ -33,7 +33,7 @@ pipeline {
               if (params.Credentials == true) {
                 sh "echo $SERVICE_CREDS"
               }
-              sh "/bin/bash time.sh"
+              sh "/bin/bash ./time.sh"
             }
           }
         }
