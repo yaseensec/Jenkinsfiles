@@ -2,7 +2,7 @@ pipeline {
   agent { label 'aws.node1'}
   options {
     retry (3)
-    #skipDefaultCheckout true
+    /* skipDefaultCheckout true */
     buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
   }
   environment {
