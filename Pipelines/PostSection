@@ -12,7 +12,6 @@ pipeline {
           timestamps {
             ansiColor('xterm') {
               checkout scm
-              }
             }
           }
         }
