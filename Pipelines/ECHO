@@ -2,25 +2,25 @@ pipeline {
   agent { label 'aws.node1'}
   options {
     retry (3)
-    /* skipDefaultCheckout true */
+    skipDefaultCheckout true
     buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
   }
   environment {
     SERVICE_CREDS = credentials('gitlab-user-pass')
   }
   stages {
-    /* stage('Checkout') { */
-    /* agent { label 'aws.node1'} */
-    /*   steps { */
-    /*     script { */
-    /*       timestamps { */
-    /*         ansiColor('xterm') { */
-    /*           checkout scm */
-    /*         } */
-    /*       } */
-    /*     } */
-    /*   } */
-    /* } */
+    stage('Checkout') {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              checkout scm
+            }
+          }
+        }
+      }
+    }
     stage('ECHO') {
     agent { label 'aws.node1'}
       steps {
@@ -33,7 +33,7 @@ pipeline {
               if (params.Credentials == true) {
                 sh "echo $SERVICE_CREDS"
               }
-              sh "/bin/bash ./time.sh"
+              sh "./time.sh"
             }
           }
         }

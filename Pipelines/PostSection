@@ -20,20 +20,19 @@ pipeline {
     stage('Hello') {
     agent { label 'aws.node1'}
       steps {
-        /* script { */
-        /*   timestamps { */
-        /*     ansiColor('xterm') { */
-        /*       if(params.PostSuccess == true) { */
-        /*         echo "Hello Yaseen" */
-        /*         sh '../time.sh' */
-        /*       } */
-        /*       else { */
-        /*         sh 'false' */
-        /*       } */
-        /*     } */
-        /*   } */
-        /* } */
-        sh './time.sh'
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              if(params.PostSuccess == true) {
+                echo "Hello Yaseen"
+                sh './time.sh'
+              }
+              else {
+                sh 'false'
+              }
+            }
+          }
+        }
       }
       post {
         success {
