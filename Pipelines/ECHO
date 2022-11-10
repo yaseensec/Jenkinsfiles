@@ -27,13 +27,13 @@ pipeline {
         script {
           timestamps {
             ansiColor('xterm') {
-              /* if(params.BuildNumber == true) { */
-              /*   echo "BuildNumber = ${env.BUILD_NUMBER}" */
-              /* } */
-              /* if (params.Credentials == true) { */
-              /*   sh "echo $SERVICE_CREDS" */
-              /* } */
-              sh './time.sh'
+              if(params.BuildNumber == true) {
+                echo "BuildNumber = ${env.BUILD_NUMBER}"
+              }
+              if (params.Credentials == true) {
+                sh "echo $SERVICE_CREDS"
+              }
+              sh "/bin/bash time.sh"
             }
           }
         }
