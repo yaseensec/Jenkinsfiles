@@ -1,6 +1,7 @@
 pipeline {
   agent { label 'aws.node1'}
   options {
+    retry (3)
     skipDefaultCheckout true
     buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
   }
@@ -20,7 +21,7 @@ pipeline {
         }
       }
     }
-    stage('Hello') {
+    stage('ECHO') {
     agent { label 'aws.node1'}
       steps {
         script {
@@ -32,6 +33,7 @@ pipeline {
               if (params.Credentials == true) {
                 sh "echo $SERVICE_CREDS"
               }
+              sh './time.sh'
             }
           }
         }
