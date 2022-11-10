@@ -58,6 +58,17 @@ pipeline {
       }
     }
   }
+  post {
+    success {
+      echo 'this is the overall post success message'
+    }
+    failure {
+      echo 'this is the overall post failure message'
+    }
+    cleanup {
+      echo 'this is the overall post cleanup message'
+    }
+  }
   options {
     buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
   }
