@@ -1,6 +1,23 @@
 pipeline {
   agent { label 'aws.node1'}
+  options {
+    skipDefaultCheckout true
+    buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
+  }
   stages {
+    stage('Checkout') {
+    agent { label 'aws.node1'}
+      steps {
+        script {
+          timestamps {
+            ansiColor('xterm') {
+              checkout scm
+              }
+            }
+          }
+        }
+      }
+    }
     stage('Hello') {
     agent { label 'aws.node1'}
       steps {
@@ -34,9 +51,6 @@ pipeline {
     cleanup {
       echo 'this is the overall post cleanup message'
     }
-  }
-  options {
-    buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')
   }
   parameters {
     booleanParam(name: 'PostSuccess', defaultValue: false, description: '')
