@@ -53,3 +53,55 @@ pipeline {
 
   }
 }
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Get Parameters') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue) {
+                            paramMap[paramName] = paramValue
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    // Pass paramMap to the next stage
+                    build job: 'NextJob', parameters: [string(name: 'paramMap', value: paramMap.inspect())]
+                }
+            }
+        }
+    }
+}
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Next Stage') {
+            steps {
+                script {
+                    def paramMap = evaluate("return ${params.paramMap}")
+
+                    // Loop through paramMap and access parameter names and values
+                    paramMap.each { paramName, paramValue ->
+                        echo "Parameter Name: ${paramName}"
+                        echo "Parameter Value: ${paramValue}"
+                        
+                        // Perform actions based on parameter name and value
+                        // Example: if (paramName == 'global') { /* do something */ }
+                    }
+                }
+            }
+        }
+    }
+}
+
