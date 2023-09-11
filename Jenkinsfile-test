@@ -140,3 +140,40 @@ pipeline {
         }
     }
 }
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbook for Filled String Parameters') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+
+                    // Filter and process only string parameters
+                    def stringParams = params.findAll { paramName, paramValue ->
+                        paramValue instanceof String
+                    }
+
+                    // Loop through the filtered string parameters
+                    stringParams.each { paramName, paramValue ->
+                        paramMap[paramName] = paramValue
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    // Loop through paramMap and run Ansible playbook for each filled string parameter
+                    paramMap.each { paramName, paramValue ->
+                        // Run Ansible playbook with parameterName and parameterValue as variables
+                        sh """
+                            ansible-playbook your_playbook.yml \
+                            -e "paramName=${paramName}" \
+                            -e "paramValue=${paramValue}"
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
