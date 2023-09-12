@@ -1,4 +1,4 @@
-oopipeline {
+pipeline {
   agent any
   stages {
     stage('Git CLoning') {
@@ -171,6 +171,92 @@ pipeline {
                             -e "paramName=${paramName}" \
                             -e "paramValue=${paramValue}"
                         """
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    def webAppVersion
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue instanceof String && paramValue != '') {
+                            paramMap[paramName] = paramValue
+                            if (paramName == 'webapp') {
+                                webAppVersion = paramValue
+                            }
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    if ('webapp' in paramMap) {
+                        // Run the webapp playbook with paramName and paramValue as environment variables
+                        sh """
+                            ansible-playbook webapp_playbook.yml \
+                            -e "paramName=webapp" \
+                            -e "paramValue=${paramValue}" \
+                            -e "webapp_version=${paramValue}"
+                        """
+                    } else if (paramMap) {
+                        // Run the default playbook for other parameters
+                        sh "ansible-playbook default_playbook.yml"
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    def webAppVersion
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue instanceof String && paramValue != '') {
+                            paramMap[paramName] = paramValue
+                            if (paramName == 'webapp') {
+                                webAppVersion = paramValue
+                            }
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    if ('webapp' in paramMap) {
+                        // Run the webapp playbook with paramName and paramValue as environment variables
+                        sh """
+                            ansible-playbook webapp_playbook.yml \
+                            -e "paramName=${paramName}" \
+                            -e "paramValue=${paramValue}" \
+                            -e "webapp_version=${webAppVersion}"
+                        """
+                    } else if (paramMap) {
+                        // Run the default playbook for other parameters
+                        sh "ansible-playbook default_playbook.yml"
                     }
                 }
             }
