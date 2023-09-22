@@ -263,3 +263,63 @@ pipeline {
         }
     }
 }
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Git checkout step
+                // ...
+            }
+        }
+
+        stage('Add SonarQube and Jacoco Plugins') {
+            steps {
+                script {
+                    // Read the pom.xml file
+                    def pomXml = readFile('path/to/your/pom.xml')
+
+                    // Define the plugin blocks to add
+                    def sonarPluginBlock = '''
+                        <plugin>
+                            <groupId>org.sonarsource.scanner.maven</groupId>
+                            <artifactId>sonar-maven-plugin</artifactId>
+                            <version>3.8.0.2131</version>
+                        </plugin>
+                    '''
+
+                    def jacocoPluginBlock = '''
+                        <plugin>
+                            <groupId>org.jacoco</groupId>
+                            <artifactId>jacoco-maven-plugin</artifactId>
+                            <version>0.8.7</version>
+                        </plugin>
+                    '''
+
+                    // Use awk to insert the plugin blocks into the pom.xml
+                    def modifiedPomXml = pomXml.replaceAll('<\/build>', sonarPluginBlock + '\n<\/build>')
+                    modifiedPomXml = modifiedPomXml.replaceAll('<\/project>', jacocoPluginBlock + '\n<\/project>')
+
+                    // Write the modified pom.xml back to the workspace
+                    writeFile(file: 'path/to/your/pom.xml', text: modifiedPomXml)
+                }
+            }
+        }
+
+        stage('Build and SonarQube Scan') {
+            steps {
+                // Maven build step
+                sh 'mvn clean install'
+
+                // Execute SonarQube scan
+                sh 'mvn sonar:sonar'
+            }
+        }
+    }
+
+    // ...
+}
