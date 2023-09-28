@@ -345,3 +345,30 @@ def jacocoPluginBlock = '''
                         </execution>
                     </executions>
                 </plugin>
+
+
+def paramMap = [:]  // Initialize an empty map
+// Populate paramMap with your key-value pairs
+
+def playbookSteps = [:]  // Initialize a map to store playbook steps
+
+paramMap.each { paramName, paramValue ->
+    // Define the name for this step (e.g., "Run Playbook - paramName")
+    def stepName = "Run Playbook - ${paramName}"
+
+    // Define the shell script to run the Ansible playbook with the parameters
+    def shellScript = """
+        ansible-playbook your_playbook.yml \\
+        -e "paramName=${paramName}" \\
+        -e "paramValue=${paramValue}"
+    """
+
+    // Store the step in the playbookSteps map
+    playbookSteps[stepName] = {
+        build job: 'Your-Jenkins-Job-Name', parameters: [
+            string(name: 'ShellScript', value: shellScript)
+        ]
+    }
+}
+
+parallel playbookSteps
