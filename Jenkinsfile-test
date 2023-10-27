@@ -401,3 +401,115 @@ pipeline {
         }
     }
 }
+
+
+
+27oct
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    // Populate paramMap with your key-value pairs
+
+                    // Check if paramMap contains the "props" parameter
+                    if (paramMap.containsKey('props')) {
+                        // Execute playbook for "props" parameter
+                        def propsParamValue = paramMap.props
+                        ansiblePlaybook(
+                            playbook: 'props_playbook.yml',
+                            inventory: 'your_inventory.ini',
+                            extras: "-e paramName=props -e paramValue=${propsParamValue}"
+                        )
+                        // Remove "props" parameter from paramMap
+                        paramMap.remove('props')
+                    }
+
+                    def playbookSteps = [:]  // Initialize a map to store playbook steps
+                    def maxParallel = 2  // Maximum number of parallel steps
+
+                    paramMap.each { paramName, paramValue ->
+                        // Define the name for this step (e.g., "Run Playbook - paramName")
+                        def stepName = "Run Playbook - ${paramName}"
+
+                        // Define the inventory file and extras for the playbook step
+                        def inventoryFile = 'your_inventory.ini'
+                        def extras = "-e paramName=${paramName} -e paramValue=${paramValue}"
+
+                        // Define the playbook step for this parameter
+                        playbookSteps[stepName] = {
+                            ansiblePlaybook(
+                                playbook: 'your_playbook.yml',
+                                inventory: inventoryFile,
+                                extras: extras
+                            )
+                        }
+                    }
+
+                    // Split paramMap into sets of at most 2 parameters
+                    def paramMapSets = paramMap.collate(maxParallel)
+
+                    // Execute playbook steps for each paramMap set
+                    paramMapSets.each { paramMapSet ->
+                        parallel paramMapSet.collectEntries { paramName, _ ->
+                            ["Run Playbook - $paramName": playbookSteps["Run Playbook - $paramName"]]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    // Populate paramMap with your key-value pairs
+
+                    def maxParallel = 2  // Maximum number of parallel steps
+
+                    paramMap.each { paramName, paramValue ->
+                        // Define the name for this step (e.g., "Run Playbook - paramName")
+                        def stepName = "Run Playbook - ${paramName}"
+
+                        // Define the inventory file and extras for the playbook step
+                        def inventoryFile = 'your_inventory.ini'
+                        def extras = "-e paramName=${paramName} -e paramValue=${paramValue}"
+
+                        // Define the playbook step for this parameter
+                        steps[stepName] = {
+                            sh "echo -e \"\\u001B[32m$stepName\\u001B[0m\""  // Add custom label with green color
+                            ansiblePlaybook(
+                                playbook: 'your_playbook.yml',
+                                inventory: inventoryFile,
+                                extras: extras
+                            )
+                        }
+                    }
+
+                    // Split paramMap into sets of at most 2 parameters
+                    def paramMapSets = paramMap.collate(maxParallel)
+
+                    // Execute playbook steps for each paramMap set
+                    paramMapSets.each { paramMapSet ->
+                        paramMapSet.each { paramName, _ ->
+                            def stepName = "Run Playbook - ${paramName}"
+                            parallel "$stepName": steps[stepName]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
