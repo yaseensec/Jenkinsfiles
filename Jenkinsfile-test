@@ -513,3 +513,26 @@ pipeline {
         }
     }
 }
+
+
+def paramMapSets = []
+def currentSet = [:]
+
+paramMap.each { paramName, paramValue ->
+    currentSet[paramName] = paramValue
+    if (currentSet.size() == maxParallel) {
+        paramMapSets.add(currentSet)
+        currentSet = [:]
+    }
+}
+
+if (currentSet.size() > 0) {
+    paramMapSets.add(currentSet)
+}
+
+// Execute playbook steps for each paramMap set
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        ["Run Playbook - $paramName": playbookSteps["Run Playbook - $paramName"]]
+    }
+}
