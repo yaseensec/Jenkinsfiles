@@ -510,6 +510,51 @@ pipeline {
                     }
                 }
             }
+
+
+
+// Define a function to wrap text in ANSI color codes
+def colorize(text, colorCode) {
+    return "\u001B[${colorCode}m${text}\u001B[0m"
+}
+
+// Define color codes for blue and green
+def blueColorCode = 34 // Blue
+def greenColorCode = 32 // Green
+
+// Initialize color index to determine the color for each paramMapSet
+def colorIndex = 0
+
+// Execute playbook steps for each paramMapSet
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        // Determine the color code for the current paramMapSet (round-robin between blue and green)
+        def currentColorCode = colorIndex % 2 == 0 ? blueColorCode : greenColorCode
+
+        // Get the colorized output using ANSI color codes
+        def coloredParamName = colorize(paramName, currentColorCode)
+        def coloredParamValue = colorize(paramValue, currentColorCode)
+
+        // Print the colored output
+        echo "Running Playbook - $coloredParamName: $coloredParamValue"
+
+        // Execute playbook step here
+        def playbookStep = playbookSteps["Run Playbook - $paramName"]
+        if (playbookStep) {
+            parallel(
+                "Execute Playbook - $paramName": {
+                    // Run playbook step for this paramMapSet
+                    // You should replace this with your actual playbook execution logic
+                    sh playbookStep
+                }
+            )
+        }
+
+        // Increment the color index for the next paramMapSet
+        colorIndex++
+    }
+}
+
         }
     }
 }
