@@ -660,3 +660,59 @@ paramMapSets.each { paramMapSet ->
     }
 }
 
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    def paramMap = [param1: 'value1', param2: 'value2']
+                    def maxParallel = 2
+
+                    def colorCodes = [34, 32] // Blue and Green ANSI color codes
+
+                    def colorIndex = 0
+
+                    // Simulate paramMapSets
+                    def paramMapSets = []
+                    def currentSet = [:]
+
+                    paramMap.each { paramName, paramValue ->
+                        currentSet[paramName] = paramValue
+                        if (currentSet.size() == maxParallel) {
+                            paramMapSets.add(currentSet)
+                            currentSet = [:]
+                        }
+                    }
+
+                    if (currentSet.size() > 0) {
+                        paramMapSets.add(currentSet)
+                    }
+
+                    paramMapSets.each { paramMapSet ->
+                        parallel paramMapSet.collect { paramName, paramValue ->
+                            def currentColorCode = colorCodes[colorIndex % 2]
+                            echo "\u001B[${currentColorCode}mRunning Playbook - ${paramName}: ${paramValue}\u001B[0m"
+
+                            def playbookStep = "echo 'Running playbook for ${paramName}'" // Replace with your playbook command
+                            if (playbookStep) {
+                                parallel(
+                                    "Execute Playbook - ${paramName}": {
+                                        // Replace with your actual playbook execution logic
+                                        sh playbookStep
+                                    }
+                                )
+                            }
+
+                            colorIndex++
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
