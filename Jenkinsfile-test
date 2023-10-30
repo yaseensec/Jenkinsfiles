@@ -536,3 +536,38 @@ paramMapSets.each { paramMapSet ->
         ["Run Playbook - $paramName": playbookSteps["Run Playbook - $paramName"]]
     }
 }
+
+
+
+// Define a function to wrap text in ANSI color codes
+def colorize(text, colorCode) {
+    return "\u001B[${colorCode}m${text}\u001B[0m"
+}
+
+// Define color codes for blue and green
+def blueColorCode = 34 // Blue
+def greenColorCode = 32 // Green
+
+// Initialize color counters
+def colorCounter = 0
+
+// ... (Your existing code)
+
+// Execute playbook steps for each paramMap set
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        // Determine the color code for the current step (round-robin between blue and green)
+        def currentColorCode = colorCounter % 2 == 0 ? blueColorCode : greenColorCode
+
+        // Get the colorized output using ANSI color codes
+        def coloredOutput = colorize("Running Playbook - $paramName: $paramValue", currentColorCode)
+
+        // Print the colored output
+        echo coloredOutput
+
+        // Increment the color counter for the next step
+        colorCounter++
+
+        // Execute playbook step here (you might need to update your playbook execution logic)
+    }
+}
