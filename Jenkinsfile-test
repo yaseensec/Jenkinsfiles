@@ -716,3 +716,53 @@ pipeline {
     }
 }
 
+
+
+
+
+// Define repositories and relevant files for Ansible repo
+def codeRepo = "gitlab.com/codeRepo"
+def ansibleRepo = "gitlab.com/ansibleRepo"
+def relevantFilesForAnsible = ["build.groovy", "deploy.yml"]
+
+// Function to process changesets
+def processChangesets(repoUrl, relevantFiles = []) {
+    def changeLogSets = currentBuild.changeSets
+    def commList = ''
+
+    for (entry in changeLogSets) {
+        echo "${entry.id} by ${entry.author} on ${new Date(entry.timestamp)}: ${entry.msg}"
+
+        // Check if the repository matches Ansible and if relevant files are specified
+        if (repoUrl == ansibleRepo && !relevantFiles.isEmpty()) {
+            // Check if the affected files include the relevant ones for Ansible repository
+            def relevantChanges = entry.items.findAll { file ->
+                relevantFiles.contains(file.path) || file.path.startsWith("Np-Deploy/")
+            }
+
+            if (!relevantChanges.isEmpty()) {
+                commList = commList + "<li>${repoUrl}${entry.id}</li>"
+                // Process affected files if needed
+                for (file in relevantChanges) {
+                    echo "  ${file.editType} ${file.path}"
+                }
+            }
+        } else {
+            // For other repositories or if no relevant files are specified, include all changes
+            commList = commList + "<li>${repoUrl}${entry.id}</li>"
+            // Process affected files if needed
+            for (file in entry.items) {
+                echo "  ${file.editType} ${file.path}"
+            }
+        }
+    }
+    return commList
+}
+
+// Process changesets for code repository
+def codeCommList = processChangesets(codeRepo)
+
+// Process changesets for Ansible repository with file filtering
+def ansibleCommList = processChangesets(ansibleRepo, relevantFilesForAnsible)
+
+// Now you have codeCommList for the code repository and ansibleCommList with only the relevant changesets for the specified files in the Ansible repository
