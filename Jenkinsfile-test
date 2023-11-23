@@ -766,3 +766,10 @@ def codeCommList = processChangesets(codeRepo)
 def ansibleCommList = processChangesets(ansibleRepo, relevantFilesForAnsible)
 
 // Now you have codeCommList for the code repository and ansibleCommList with only the relevant changesets for the specified files in the Ansible repository
+
+
+sh """
+COVERAGE_METRICS=$(curl -s -u SONAR_TOKEN: -X GET http://sonarhost/api/measures/component -d "component=<project_key>&metricKeys=coverage,uncovered_lines")
+COVERAGE=$(echo $COVERAGE_METRICS | jq -r '.component.measures[] | select(.metric == "coverage") | .value')
+UNCOVERED_LINES=$(echo $COVERAGE_METRICS | jq -r '.component.measures[] | select(.metric == "uncovered_lines") | .value')
+"""
