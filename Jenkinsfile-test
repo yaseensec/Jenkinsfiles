@@ -53,3 +53,723 @@ pipeline {
 
   }
 }
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Get Parameters') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue) {
+                            paramMap[paramName] = paramValue
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    // Pass paramMap to the next stage
+                    build job: 'NextJob', parameters: [string(name: 'paramMap', value: paramMap.inspect())]
+                }
+            }
+        }
+    }
+}
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Next Stage') {
+            steps {
+                script {
+                    def paramMap = evaluate("return ${params.paramMap}")
+
+                    // Loop through paramMap and access parameter names and values
+                    paramMap.each { paramName, paramValue ->
+                        echo "Parameter Name: ${paramName}"
+                        echo "Parameter Value: ${paramValue}"
+                        
+                        // Perform actions based on parameter name and value
+                        // Example: if (paramName == 'global') { /* do something */ }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbook for Filled Parameters') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue) {
+                            paramMap[paramName] = paramValue
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    // Loop through paramMap and run Ansible playbook for each filled parameter
+                    paramMap.each { paramName, paramValue ->
+                        // Run Ansible playbook with parameterName and parameterValue as variables
+                        sh """
+                            ansible-playbook your_playbook.yml \
+                            -e "paramName=${paramName}" \
+                            -e "paramValue=${paramValue}"
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbook for Filled String Parameters') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+
+                    // Filter and process only string parameters
+                    def stringParams = params.findAll { paramName, paramValue ->
+                        paramValue instanceof String
+                    }
+
+                    // Loop through the filtered string parameters
+                    stringParams.each { paramName, paramValue ->
+                        paramMap[paramName] = paramValue
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    // Loop through paramMap and run Ansible playbook for each filled string parameter
+                    paramMap.each { paramName, paramValue ->
+                        // Run Ansible playbook with parameterName and parameterValue as variables
+                        sh """
+                            ansible-playbook your_playbook.yml \
+                            -e "paramName=${paramName}" \
+                            -e "paramValue=${paramValue}"
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    def webAppVersion
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue instanceof String && paramValue != '') {
+                            paramMap[paramName] = paramValue
+                            if (paramName == 'webapp') {
+                                webAppVersion = paramValue
+                            }
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    if ('webapp' in paramMap) {
+                        // Run the webapp playbook with paramName and paramValue as environment variables
+                        sh """
+                            ansible-playbook webapp_playbook.yml \
+                            -e "paramName=webapp" \
+                            -e "paramValue=${paramValue}" \
+                            -e "webapp_version=${paramValue}"
+                        """
+                    } else if (paramMap) {
+                        // Run the default playbook for other parameters
+                        sh "ansible-playbook default_playbook.yml"
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Ansible Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    def webAppVersion
+
+                    // Loop through all available parameters
+                    params.each { paramName, paramValue ->
+                        if (paramValue instanceof String && paramValue != '') {
+                            paramMap[paramName] = paramValue
+                            if (paramName == 'webapp') {
+                                webAppVersion = paramValue
+                            }
+                        }
+                    }
+
+                    // Print the parameter map for verification
+                    echo "Parameter Map: ${paramMap}"
+
+                    if ('webapp' in paramMap) {
+                        // Run the webapp playbook with paramName and paramValue as environment variables
+                        sh """
+                            ansible-playbook webapp_playbook.yml \
+                            -e "paramName=${paramName}" \
+                            -e "paramValue=${paramValue}" \
+                            -e "webapp_version=${webAppVersion}"
+                        """
+                    } else if (paramMap) {
+                        // Run the default playbook for other parameters
+                        sh "ansible-playbook default_playbook.yml"
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Git checkout step
+                // ...
+            }
+        }
+
+        stage('Add SonarQube and Jacoco Plugins') {
+            steps {
+                script {
+                    // Read the pom.xml file
+                    def pomXml = readFile('path/to/your/pom.xml')
+
+                    // Define the plugin blocks to add
+                    def sonarPluginBlock = '''
+                        <plugin>
+                            <groupId>org.sonarsource.scanner.maven</groupId>
+                            <artifactId>sonar-maven-plugin</artifactId>
+                            <version>3.8.0.2131</version>
+                        </plugin>
+                    '''
+
+                    def jacocoPluginBlock = '''
+                        <plugin>
+                            <groupId>org.jacoco</groupId>
+                            <artifactId>jacoco-maven-plugin</artifactId>
+                            <version>0.8.7</version>
+                        </plugin>
+                    '''
+
+                    // Use awk to insert the plugin blocks into the pom.xml
+                    def modifiedPomXml = pomXml.replaceAll('<\/build>', sonarPluginBlock + '\n<\/build>')
+                    modifiedPomXml = modifiedPomXml.replaceAll('<\/project>', jacocoPluginBlock + '\n<\/project>')
+
+                    // Write the modified pom.xml back to the workspace
+                    writeFile(file: 'path/to/your/pom.xml', text: modifiedPomXml)
+                }
+            }
+        }
+
+        stage('Build and SonarQube Scan') {
+            steps {
+                // Maven build step
+                sh 'mvn clean install'
+
+                // Execute SonarQube scan
+                sh 'mvn sonar:sonar'
+            }
+        }
+    }
+
+    // ...
+}
+
+
+def jacocoPluginBlock = '''
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.7</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+
+def paramMap = [:]  // Initialize an empty map
+// Populate paramMap with your key-value pairs
+
+def playbookSteps = [:]  // Initialize a map to store playbook steps
+
+paramMap.each { paramName, paramValue ->
+    // Define the name for this step (e.g., "Run Playbook - paramName")
+    def stepName = "Run Playbook - ${paramName}"
+
+    // Define the shell script to run the Ansible playbook with the parameters
+    def shellScript = """
+        ansible-playbook your_playbook.yml \\
+        -e "paramName=${paramName}" \\
+        -e "paramValue=${paramValue}"
+    """
+
+    // Store the step in the playbookSteps map
+    playbookSteps[stepName] = {
+        build job: 'Your-Jenkins-Job-Name', parameters: [
+            string(name: 'ShellScript', value: shellScript)
+        ]
+    }
+}
+
+parallel playbookSteps
+
+
+
+pipeline {
+    agent any
+    stages {
+        stage('Read File and Set Variables') {
+            steps {
+                script {
+                    def fileContent = readFile('PWD.txt').trim()
+                    def fileLines = fileContent.tokenize('\n') // Split by newline if multiple lines
+
+                    // You can now set the content as environment variables
+                    for (int i = 0; i < fileLines.size(); i++) {
+                        def parts = fileLines[i].tokenize('=')
+                        if (parts.size() == 2) {
+                            env[parts[0]] = parts[1]
+                        }
+                    }
+                }
+            }
+        }
+        stage('Use Loaded Variables') {
+            steps {
+                echo "Value from PWD.txt: ${env.YOUR_VARIABLE_NAME}" // Access the loaded variable
+            }
+        }
+    }
+}
+
+
+
+27oct
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    // Populate paramMap with your key-value pairs
+
+                    // Check if paramMap contains the "props" parameter
+                    if (paramMap.containsKey('props')) {
+                        // Execute playbook for "props" parameter
+                        def propsParamValue = paramMap.props
+                        ansiblePlaybook(
+                            playbook: 'props_playbook.yml',
+                            inventory: 'your_inventory.ini',
+                            extras: "-e paramName=props -e paramValue=${propsParamValue}"
+                        )
+                        // Remove "props" parameter from paramMap
+                        paramMap.remove('props')
+                    }
+
+                    def playbookSteps = [:]  // Initialize a map to store playbook steps
+                    def maxParallel = 2  // Maximum number of parallel steps
+
+                    paramMap.each { paramName, paramValue ->
+                        // Define the name for this step (e.g., "Run Playbook - paramName")
+                        def stepName = "Run Playbook - ${paramName}"
+
+                        // Define the inventory file and extras for the playbook step
+                        def inventoryFile = 'your_inventory.ini'
+                        def extras = "-e paramName=${paramName} -e paramValue=${paramValue}"
+
+                        // Define the playbook step for this parameter
+                        playbookSteps[stepName] = {
+                            ansiblePlaybook(
+                                playbook: 'your_playbook.yml',
+                                inventory: inventoryFile,
+                                extras: extras
+                            )
+                        }
+                    }
+
+                    // Split paramMap into sets of at most 2 parameters
+                    def paramMapSets = paramMap.collate(maxParallel)
+
+                    // Execute playbook steps for each paramMap set
+                    paramMapSets.each { paramMapSet ->
+                        parallel paramMapSet.collectEntries { paramName, _ ->
+                            ["Run Playbook - $paramName": playbookSteps["Run Playbook - $paramName"]]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Run Playbooks') {
+            steps {
+                script {
+                    def paramMap = [:]  // Initialize an empty map
+                    // Populate paramMap with your key-value pairs
+
+                    def maxParallel = 2  // Maximum number of parallel steps
+
+                    paramMap.each { paramName, paramValue ->
+                        // Define the name for this step (e.g., "Run Playbook - paramName")
+                        def stepName = "Run Playbook - ${paramName}"
+
+                        // Define the inventory file and extras for the playbook step
+                        def inventoryFile = 'your_inventory.ini'
+                        def extras = "-e paramName=${paramName} -e paramValue=${paramValue}"
+
+                        // Define the playbook step for this parameter
+                        steps[stepName] = {
+                            sh "echo -e \"\\u001B[32m$stepName\\u001B[0m\""  // Add custom label with green color
+                            ansiblePlaybook(
+                                playbook: 'your_playbook.yml',
+                                inventory: inventoryFile,
+                                extras: extras
+                            )
+                        }
+                    }
+
+                    // Split paramMap into sets of at most 2 parameters
+                    def paramMapSets = paramMap.collate(maxParallel)
+
+                    // Execute playbook steps for each paramMap set
+                    paramMapSets.each { paramMapSet ->
+                        paramMapSet.each { paramName, _ ->
+                            def stepName = "Run Playbook - ${paramName}"
+                            parallel "$stepName": steps[stepName]
+                        }
+                    }
+                }
+            }
+
+
+
+// Define a function to wrap text in ANSI color codes
+def colorize(text, colorCode) {
+    return "\u001B[${colorCode}m${text}\u001B[0m"
+}
+
+// Define color codes for blue and green
+def blueColorCode = 34 // Blue
+def greenColorCode = 32 // Green
+
+// Initialize color index to determine the color for each paramMapSet
+def colorIndex = 0
+
+// Execute playbook steps for each paramMapSet
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        // Determine the color code for the current paramMapSet (round-robin between blue and green)
+        def currentColorCode = colorIndex % 2 == 0 ? blueColorCode : greenColorCode
+
+        // Get the colorized output using ANSI color codes
+        def coloredParamName = colorize(paramName, currentColorCode)
+        def coloredParamValue = colorize(paramValue, currentColorCode)
+
+        // Print the colored output
+        echo "Running Playbook - $coloredParamName: $coloredParamValue"
+
+        // Execute playbook step here
+        def playbookStep = playbookSteps["Run Playbook - $paramName"]
+        if (playbookStep) {
+            parallel(
+                "Execute Playbook - $paramName": {
+                    // Run playbook step for this paramMapSet
+                    // You should replace this with your actual playbook execution logic
+                    sh playbookStep
+                }
+            )
+        }
+
+        // Increment the color index for the next paramMapSet
+        colorIndex++
+    }
+}
+
+        }
+    }
+}
+
+
+def paramMapSets = []
+def currentSet = [:]
+
+paramMap.each { paramName, paramValue ->
+    currentSet[paramName] = paramValue
+    if (currentSet.size() == maxParallel) {
+        paramMapSets.add(currentSet)
+        currentSet = [:]
+    }
+}
+
+if (currentSet.size() > 0) {
+    paramMapSets.add(currentSet)
+}
+
+// Execute playbook steps for each paramMap set
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        ["Run Playbook - $paramName": playbookSteps["Run Playbook - $paramName"]]
+    }
+}
+
+
+
+// Define a function to wrap text in ANSI color codes
+def colorize(text, colorCode) {
+    return "\u001B[${colorCode}m${text}\u001B[0m"
+}
+
+// Define color codes for blue and green
+def blueColorCode = 34 // Blue
+def greenColorCode = 32 // Green
+
+// Initialize color counters
+def colorCounter = 0
+
+// ... (Your existing code)
+
+// Execute playbook steps for each paramMap set
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        // Determine the color code for the current step (round-robin between blue and green)
+        def currentColorCode = colorCounter % 2 == 0 ? blueColorCode : greenColorCode
+
+        // Get the colorized output using ANSI color codes
+        def coloredOutput = colorize("Running Playbook - $paramName: $paramValue", currentColorCode)
+
+        // Print the colored output
+        echo coloredOutput
+
+        // Increment the color counter for the next step
+        colorCounter++
+
+        // Execute playbook step here (you might need to update your playbook execution logic)
+    }
+}
+
+
+// Define a function to wrap text in ANSI color codes
+def colorize(text, colorCode) {
+    return "\u001B[${colorCode}m${text}\u001B[0m"
+}
+
+// Define color codes for blue and green
+def blueColorCode = 34 // Blue
+def greenColorCode = 32 // Green
+
+// Initialize color index to determine the color for each paramMapSet
+def colorIndex = 0
+
+// Execute playbook steps for each paramMapSet
+paramMapSets.each { paramMapSet ->
+    parallel paramMapSet.collect { paramName, paramValue ->
+        // Determine the color code for the current paramMapSet (round-robin between blue and green)
+        def currentColorCode = colorIndex % 2 == 0 ? blueColorCode : greenColorCode
+
+        // Get the colorized output using ANSI color codes
+        def coloredParamName = colorize(paramName, currentColorCode)
+        def coloredParamValue = colorize(paramValue, currentColorCode)
+
+        // Print the colored output
+        echo "Running Playbook - $coloredParamName: $coloredParamValue"
+
+        // Execute playbook step here
+        def playbookStep = playbookSteps["Run Playbook - $paramName"]
+        if (playbookStep) {
+            parallel(
+                "Execute Playbook - $paramName": {
+                    // Run playbook step for this paramMapSet
+                    // You should replace this with your actual playbook execution logic
+                    sh playbookStep
+                }
+            )
+        }
+
+        // Increment the color index for the next paramMapSet
+        colorIndex++
+    }
+}
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    def paramMap = [param1: 'value1', param2: 'value2']
+                    def maxParallel = 2
+
+                    def colorCodes = [34, 32] // Blue and Green ANSI color codes
+
+                    def colorIndex = 0
+
+                    // Simulate paramMapSets
+                    def paramMapSets = []
+                    def currentSet = [:]
+
+                    paramMap.each { paramName, paramValue ->
+                        currentSet[paramName] = paramValue
+                        if (currentSet.size() == maxParallel) {
+                            paramMapSets.add(currentSet)
+                            currentSet = [:]
+                        }
+                    }
+
+                    if (currentSet.size() > 0) {
+                        paramMapSets.add(currentSet)
+                    }
+
+                    paramMapSets.each { paramMapSet ->
+                        parallel paramMapSet.collect { paramName, paramValue ->
+                            def currentColorCode = colorCodes[colorIndex % 2]
+                            echo "\u001B[${currentColorCode}mRunning Playbook - ${paramName}: ${paramValue}\u001B[0m"
+
+                            def playbookStep = "echo 'Running playbook for ${paramName}'" // Replace with your playbook command
+                            if (playbookStep) {
+                                parallel(
+                                    "Execute Playbook - ${paramName}": {
+                                        // Replace with your actual playbook execution logic
+                                        sh playbookStep
+                                    }
+                                )
+                            }
+
+                            colorIndex++
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+// Define repositories and relevant files for Ansible repo
+def codeRepo = "gitlab.com/codeRepo"
+def ansibleRepo = "gitlab.com/ansibleRepo"
+def relevantFilesForAnsible = ["build.groovy", "deploy.yml"]
+
+// Function to process changesets
+def processChangesets(repoUrl, relevantFiles = []) {
+    def changeLogSets = currentBuild.changeSets
+    def commList = ''
+
+    for (entry in changeLogSets) {
+        echo "${entry.id} by ${entry.author} on ${new Date(entry.timestamp)}: ${entry.msg}"
+
+        // Check if the repository matches Ansible and if relevant files are specified
+        if (repoUrl == ansibleRepo && !relevantFiles.isEmpty()) {
+            // Check if the affected files include the relevant ones for Ansible repository
+            def relevantChanges = entry.items.findAll { file ->
+                relevantFiles.contains(file.path) || file.path.startsWith("Np-Deploy/")
+            }
+
+            if (!relevantChanges.isEmpty()) {
+                commList = commList + "<li>${repoUrl}${entry.id}</li>"
+                // Process affected files if needed
+                for (file in relevantChanges) {
+                    echo "  ${file.editType} ${file.path}"
+                }
+            }
+        } else {
+            // For other repositories or if no relevant files are specified, include all changes
+            commList = commList + "<li>${repoUrl}${entry.id}</li>"
+            // Process affected files if needed
+            for (file in entry.items) {
+                echo "  ${file.editType} ${file.path}"
+            }
+        }
+    }
+    return commList
+}
+
+// Process changesets for code repository
+def codeCommList = processChangesets(codeRepo)
+
+// Process changesets for Ansible repository with file filtering
+def ansibleCommList = processChangesets(ansibleRepo, relevantFilesForAnsible)
+
+// Now you have codeCommList for the code repository and ansibleCommList with only the relevant changesets for the specified files in the Ansible repository
+
+
+sh """
+COVERAGE_METRICS=$(curl -s -u SONAR_TOKEN: -X GET http://sonarhost/api/measures/component -d "component=<project_key>&metricKeys=coverage,uncovered_lines")
+COVERAGE=$(echo $COVERAGE_METRICS | jq -r '.component.measures[] | select(.metric == "coverage") | .value')
+UNCOVERED_LINES=$(echo $COVERAGE_METRICS | jq -r '.component.measures[] | select(.metric == "uncovered_lines") | .value')
+"""
