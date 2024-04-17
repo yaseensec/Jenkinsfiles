@@ -773,3 +773,36 @@ COVERAGE_METRICS=$(curl -s -u SONAR_TOKEN: -X GET http://sonarhost/api/measures/
 COVERAGE=$(echo $COVERAGE_METRICS | jq -r '.component.measures[] | select(.metric == "coverage") | .value')
 UNCOVERED_LINES=$(echo $COVERAGE_METRICS | jq -r '.component.measures[] | select(.metric == "uncovered_lines") | .value')
 """
+
+
+
+#!/bin/bash
+
+# Directory paths
+jar_dir="/apps/jars"
+tar_dir="/apps/tars"
+log_dir="/opt/Apache/sso/debug/logs"
+
+# Function to keep 3 most recent files
+keep_recent_3() {
+    local dir=$1
+    local file_ext=$2
+
+    # Change to the directory
+    cd "$dir" || return
+
+    # List files by modification time, newest first
+    files=(*$file_ext)
+    IFS=$'\n' sorted_files=($(sort -r <<<"${files[*]}"))
+
+    # Keep only the first 3, delete the rest
+    for ((i=3; i<${#sorted_files[@]}; i++)); do
+        echo "Deleting: ${sorted_files[$i]}"
+        rm "${sorted_files[$i]}"
+    done
+}
+
+# Call the function for each directory
+keep_recent_3 "$jar_dir" "*.jar*"
+keep_recent_3 "$tar_dir" "*.tar*"
+keep_recent_3 "$log_dir" "*.log*"
