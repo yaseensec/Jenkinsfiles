@@ -985,3 +985,63 @@ echo "$(date): EFS cleanup completed" | tee -a "$LOG_FILE"
 
 ulimit -v 524288  # Limit virtual memory to 512MB
 logrotate /etc/logrotate.conf
+
+
+#!/bin/bash
+
+# Base directory for test data
+BASE_DIR="${HOME}/efs_test_data"
+mkdir -p "$BASE_DIR"
+
+# Variables for the test setup
+NUM_DIRS=10       # Number of main directories to create
+FILES_PER_DIR=20  # Number of files per directory
+DEPTH=3           # Depth of nested directories
+FILE_SIZE="10M"   # Size of each file (10MB for testing)
+
+# Extensions for log files
+EXTENSIONS=("log" "txt" "dat" "tmp")
+
+echo "Creating test data in $BASE_DIR..."
+
+# Function to create random data files
+generate_files() {
+    local target_dir=$1
+
+    for ((i=1; i<=FILES_PER_DIR; i++)); do
+        # Select random extension and filename
+        extension=${EXTENSIONS[RANDOM % ${#EXTENSIONS[@]}]}
+        filename="file_$i.$extension"
+        
+        # Generate file with random data
+        dd if=/dev/urandom of="${target_dir}/${filename}" bs=1M count=$(echo $FILE_SIZE | tr -d 'M') status=none
+        
+        # Randomly assign old timestamps to simulate older files
+        if (( RANDOM % 2 == 0 )); then
+            touch -d "$((RANDOM % 30 + 30)) days ago" "${target_dir}/${filename}"
+        fi
+    done
+}
+
+# Recursive function to create nested directories and files
+create_directories() {
+    local current_depth=$1
+    local current_dir=$2
+
+    # Create files in the current directory
+    generate_files "$current_dir"
+
+    # If we haven't reached the max depth, create more directories
+    if (( current_depth < DEPTH )); then
+        for ((j=1; j<=NUM_DIRS; j++)); do
+            new_dir="${current_dir}/subdir_$j"
+            mkdir -p "$new_dir"
+            create_directories $((current_depth + 1)) "$new_dir"
+        done
+    fi
+}
+
+# Start generating directories and files
+create_directories 1 "$BASE_DIR"
+
+echo "Test data creation complete in $BASE_DIR."
