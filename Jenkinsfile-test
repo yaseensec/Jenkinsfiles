@@ -806,3 +806,182 @@ keep_recent_3() {
 keep_recent_3 "$jar_dir" "*.jar*"
 keep_recent_3 "$tar_dir" "*.tar*"
 keep_recent_3 "$log_dir" "*.log*"
+
+
+
+
+import os
+import gzip
+import shutil
+import boto3
+import datetime
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Configuration
+EFS_PATH = "/mnt/efs"
+S3_BUCKET = "your-s3-bucket-name"
+LOG_FILE = "/mnt/efs/efs_cleanup.log"
+EXCLUDE_FOLDERS = {"folder_to_exclude1", "folder_to_exclude2"}  # Folders to skip
+MAX_DAYS = 7  # Keep last 7 days of data
+MAX_WORKERS = 4  # Limit concurrent threads
+AWS_REGION = "us-west-2"
+
+# Setup logging
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format="%(asctime)s - %(message)s")
+
+# Initialize S3 client
+s3_client = boto3.client('s3', region_name=AWS_REGION)
+
+def get_file_age_in_days(file_path):
+    file_mtime = os.path.getmtime(file_path)
+    file_age = (datetime.datetime.now() - datetime.datetime.fromtimestamp(file_mtime)).days
+    return file_age
+
+def compress_and_upload(file_path):
+    try:
+        compressed_path = file_path + ".gz"
+        # Compress the file
+        with open(file_path, 'rb') as f_in, gzip.open(compressed_path, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+        # Upload to S3
+        s3_key = os.path.relpath(compressed_path, EFS_PATH)
+        s3_client.upload_file(compressed_path, S3_BUCKET, s3_key)
+        logging.info(f"Uploaded {compressed_path} to S3 bucket {S3_BUCKET} as {s3_key}")
+
+        # Delete original file and compressed file locally
+        os.remove(file_path)
+        os.remove(compressed_path)
+        logging.info(f"Deleted local files: {file_path} and {compressed_path}")
+    except Exception as e:
+        logging.error(f"Error compressing or uploading {file_path}: {e}")
+
+def cleanup_folder(folder_path):
+    try:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = []
+            for root, _, files in os.walk(folder_path):
+                # Skip excluded folders
+                if any(ex_folder in root for ex_folder in EXCLUDE_FOLDERS):
+                    continue
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    if get_file_age_in_days(file_path) > MAX_DAYS:
+                        futures.append(executor.submit(compress_and_upload, file_path))
+
+            # Wait for all uploads to complete
+            for future in as_completed(futures):
+                future.result()
+        logging.info(f"Cleanup completed for folder {folder_path}")
+    except Exception as e:
+        logging.error(f"Error cleaning up folder {folder_path}: {e}")
+
+if __name__ == "__main__":
+    logging.info("Starting EFS cleanup script")
+    cleanup_folder(EFS_PATH)
+    logging.info("EFS cleanup script completed")
+
+
+
+#!/bin/bash
+
+# Configuration
+EFS_PATH="/mnt/efs"
+S3_BUCKET="your-s3-bucket-name"
+LOG_FILE="/mnt/efs/efs_cleanup.log"
+EXCLUDE_FOLDERS=("folder_to_exclude1" "folder_to_exclude2")  # Specify folders to skip
+MAX_DAYS=7  # Keep files from last 7 days
+AWS_REGION="us-west-2"
+
+# Start logging
+echo "$(date): Starting EFS cleanup" | tee -a "$LOG_FILE"
+
+# Loop through each folder in EFS_PATH to process files
+find "$EFS_PATH" -type f ! -path "$EFS_PATH/${EXCLUDE_FOLDERS[0]}/*" ! -path "$EFS_PATH/${EXCLUDE_FOLDERS[1]}/*" -mtime +$MAX_DAYS | while read -r file; do
+
+    # Compress the file
+    gzip "$file"
+    compressed_file="$file.gz"
+    echo "$(date): Compressed $file to $compressed_file" | tee -a "$LOG_FILE"
+
+    # Upload to S3
+    s3_key="${compressed_file#$EFS_PATH/}"
+    aws s3 cp "$compressed_file" "s3://$S3_BUCKET/$s3_key" --region "$AWS_REGION"
+    if [[ $? -eq 0 ]]; then
+        echo "$(date): Uploaded $compressed_file to s3://$S3_BUCKET/$s3_key" | tee -a "$LOG_FILE"
+        # Delete the original file and compressed file from EFS after upload
+        rm -f "$compressed_file"
+        echo "$(date): Deleted local file $compressed_file" | tee -a "$LOG_FILE"
+    else
+        echo "$(date): Failed to upload $compressed_file to S3" | tee -a "$LOG_FILE"
+    fi
+done
+
+echo "$(date): EFS cleanup completed" | tee -a "$LOG_FILE"
+
+
+
+#!/bin/bash
+
+# Limit CPU and I/O priority
+# nice -n 10: Lower priority for CPU usage
+# ionice -c2 -n7: Lower priority for disk I/O
+exec nice -n 10 ionice -c2 -n7 bash "$0"
+
+# Limit memory usage to 512MB
+ulimit -v 524288
+
+# Configuration
+EFS_PATH="/mnt/efs"
+S3_BUCKET="your-s3-bucket-name"
+LOG_FILE="/mnt/efs/efs_cleanup.log"
+EXCLUDE_FOLDERS=("folder_to_exclude1" "folder_to_exclude2")  # Specify folders to skip
+MAX_DAYS=7  # Keep files from last 7 days
+AWS_REGION="us-west-2"
+
+# Start logging
+echo "$(date): Starting EFS cleanup" | tee -a "$LOG_FILE"
+
+# Loop through each folder in EFS_PATH to process files
+find "$EFS_PATH" -type f ! -path "$EFS_PATH/${EXCLUDE_FOLDERS[0]}/*" ! -path "$EFS_PATH/${EXCLUDE_FOLDERS[1]}/*" -mtime +$MAX_DAYS | while read -r file; do
+
+    # Compress the file
+    gzip "$file"
+    compressed_file="$file.gz"
+    echo "$(date): Compressed $file to $compressed_file" | tee -a "$LOG_FILE"
+
+    # Upload to S3
+    s3_key="${compressed_file#$EFS_PATH/}"
+    aws s3 cp "$compressed_file" "s3://$S3_BUCKET/$s3_key" --region "$AWS_REGION"
+    if [[ $? -eq 0 ]]; then
+        echo "$(date): Uploaded $compressed_file to s3://$S3_BUCKET/$s3_key" | tee -a "$LOG_FILE"
+        # Delete the original file and compressed file from EFS after upload
+        rm -f "$compressed_file"
+        echo "$(date): Deleted local file $compressed_file" | tee -a "$LOG_FILE"
+    else
+        echo "$(date): Failed to upload $compressed_file to S3" | tee -a "$LOG_FILE"
+    fi
+done
+
+echo "$(date): EFS cleanup completed" | tee -a "$LOG_FILE"
+
+
+/mnt/efs/efs_cleanup.log {
+    daily                     # Rotate the log file daily
+    rotate 7                  # Keep only the last 7 rotations locally
+    compress                  # Compress old logs to save space
+    missingok                 # Ignore if the log file is missing
+    notifempty                # Do not rotate empty log files
+    delaycompress             # Delay compression until the next rotation
+    copytruncate              # Truncate the log after rotation for continued logging
+
+    # Post-rotation script to upload to S3 and delete local copy
+    postrotate
+        # Upload all compressed log files (except the latest 7 kept by `rotate`) to S3
+        find /mnt/efs -name 'efs_cleanup.log.*.gz' -exec aws s3 cp {} s3://your-s3-bucket-name/logs/efs/ \; -exec rm {} \;
+    endscript
+}
+
+ulimit -v 524288  # Limit virtual memory to 512MB
+logrotate /etc/logrotate.conf
